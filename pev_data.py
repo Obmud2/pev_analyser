@@ -38,24 +38,25 @@ def get_csv_data(full_path):
     df = df.set_index('comp_no')
     return df
 
+def get_time(time_str, utc=0):
+    if re.match("[0-9]{6}", time_str):
+        return datetime.time(
+            hour   = int(time_str[0:2]) + utc,
+            minute = int(time_str[2:4]),
+            second = int(time_str[4:6]))
+    else:
+        print(f"Time parse error: {time_str}")
+
 def parse_row(row_str, file_date=datetime.date(1970,1,1)):
-    def get_time(time_str):
-        if re.match("[0-9]{6}", time_str):
-            return datetime.time(
-                hour   = int(time_str[0:2])+UTC_OFFSET,
-                minute = int(time_str[2:4]),
-                second = int(time_str[4:6]))
-        else:
-            print(f"Time parse error: {row_str}")
     if row_str.startswith("H"):
         if row_str[1:5] == "FDTE":
             date_str = re.search("[0-9]{6}", row_str).group()
             return datetime.datetime.strptime(date_str, "%d%m%y").date()
     elif row_str.startswith("E"):
         if row_str[7:10]=="PEV":
-            return datetime.datetime.combine(file_date, get_time(row_str[1:7]))
+            return datetime.datetime.combine(file_date, get_time(row_str[1:7], UTC_OFFSET))
     elif row_str.startswith("B"):
-        fix_time = datetime.datetime.combine(file_date, get_time(row_str[1:7]))
+        fix_time = datetime.datetime.combine(file_date, get_time(row_str[1:7], UTC_OFFSET))
         return Position(fix_time,row_str[7:24],row_str[25:30],row_str[30:35])
     print(f"Type not parsed: {row_str}")
 
@@ -75,17 +76,23 @@ def get_pevs(path):
             n = 0
             check_next_line = 0
             file_date = 0
-            print(f"{comp_no}\nStart time: {competitor_data.loc[comp_no]['start_time']}")
+            start_time = competitor_data.loc[comp_no]['start_time'].replace(':','')
+            if start_time:
+                start_time = get_time(start_time)
+            print(f"{comp_no}\nStart time: {start_time.strftime('%X')}")
             try:
                 for line in file:
                     if line.startswith("HFDTE"): # Date line
                         file_date = parse_row(line)
+                        start_time = datetime.datetime.combine(file_date, start_time)
                     elif line.startswith("E") and line[7:10]=="PEV": # PEV marker
                         pev_time = parse_row(line, file_date)
                         check_next_line = 1
                     elif check_next_line and line.startswith("B"): # Next B fix after PEV
                         pos = parse_row(line, file_date)
-                        print(f"PEV: {pos.get_position_str()}")
+                        time_delta_to_start = start_time - pos.time
+                        time_delta_str = "After start" if time_delta_to_start < datetime.timedelta(0) else f"-{time_delta_to_start}"
+                        print(f"PEV: {pos.time.strftime('%X')} ({time_delta_str})")
                         pevs[comp_no].append(pos)
                         check_next_line = 0
                     n += 1
