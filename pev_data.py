@@ -84,13 +84,13 @@ def get_pevs(path):
                 for line in file:
                     if line.startswith("HFDTE"): # Date line
                         file_date = parse_row(line)
-                        start_time = datetime.datetime.combine(file_date, start_time)
+                        start_time_obj = datetime.datetime.combine(file_date, start_time)
                     elif line.startswith("E") and line[7:10]=="PEV": # PEV marker
                         pev_time = parse_row(line, file_date)
                         check_next_line = 1
                     elif check_next_line and line.startswith("B"): # Next B fix after PEV
                         pos = parse_row(line, file_date)
-                        time_delta_to_start = start_time - pos.time
+                        time_delta_to_start = start_time_obj - pos.time
                         time_delta_str = "After start" if time_delta_to_start < datetime.timedelta(0) else f"-{time_delta_to_start}"
                         print(f"PEV: {pos.time.strftime('%X')} ({time_delta_str})")
                         pevs[comp_no].append(pos)
