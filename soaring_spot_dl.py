@@ -122,7 +122,6 @@ class SoaringSpotDL():
                 response = urllib.request.urlretrieve(url, file_name)
             else:
                 print(f"Skip trace {comp_no} ({trace_counter}/{len(competitor_data)})")
-            print(file_name)
             trace_counter += 1
     
     def download_traces(self, comp_class="all", task_day="all", overwrite=False, select_day=False):
