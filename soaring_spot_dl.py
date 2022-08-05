@@ -8,6 +8,7 @@ import re
 import os
 import urllib.request
 import csv
+import time
 
 class SoaringSpotDL():
     soaringspot_url = "https://www.soaringspot.com"
@@ -39,7 +40,7 @@ class SoaringSpotDL():
         n = 1
         print("Select Day:")
         for day in days_flown:
-            print(f"{n}:\t{day['comp_class']}\t{day['task_date']}")
+            print(f"{n}:\t{day['comp_class']}\t{day['task_date'].strftime('%y-%m-%d')}")
             n += 1
         i = int(input())
         return days_flown[i-1]
@@ -116,7 +117,19 @@ class SoaringSpotDL():
                 print(f"No trace for {comp_no} ({trace_counter}/{len(competitor_data)})")
             elif not os.path.exists(file_name):
                 print(f"Downloading trace {comp_no} ({trace_counter}/{len(competitor_data)}): {url}")
-                response = urllib.request.urlretrieve(url, file_name)
+                try_counter = 0
+                while try_counter <= 3:
+                    try:
+                        if try_counter > 0:
+                            print(f"Try attempt {try_counter}")
+                        response = urllib.request.urlretrieve(url, file_name)
+                        break
+                    except Exception as e:
+                        print(f"Download error: {e.__class__.__name__}")
+                        try_counter += 1
+                        if try_counter > 3:
+                            raise Exception("Download failed.")
+                        time.sleep(1)
             elif overwrite:
                 print(f"Overwriting trace {comp_no} ({trace_counter}/{len(competitor_data)})")
                 response = urllib.request.urlretrieve(url, file_name)
@@ -139,4 +152,4 @@ class SoaringSpotDL():
 if __name__ == "__main__":
     competition_url = "/en_gb/junior-world-gliding-championships-2022-tabor-2022"
     jwgc22 = SoaringSpotDL(competition_url)
-    jwgc22.download_traces(select_day=True)
+    jwgc22.download_traces(select_day=True, overwrite=True)
