@@ -62,7 +62,7 @@ def parse_row(row_str, file_date=datetime.date(1970,1,1)):
 
 def get_pevs(path):
     igc_files = os.listdir(path=path)
-    pevs = {}
+    pevs = []
     for igc_file in igc_files:
         if igc_file.endswith('.csv'):
             competitor_data = get_csv_data(f"{path}/{igc_file}")
@@ -72,19 +72,20 @@ def get_pevs(path):
             continue
         comp_no = igc_file.split(".")[0]
         with open(f"{path}/{igc_file}", mode='r') as file:
-            pevs[comp_no] = []
-            n = 0
+            n_lines = 0
             check_next_line = 0
             file_date = 0
-            start_time = competitor_data.loc[comp_no]['start_time'].replace(':','')
-            if start_time:
-                start_time = get_time(start_time)
-            print(f"{comp_no}\nStart time: {start_time.strftime('%X')}")
+            temp_start_time = competitor_data.loc[comp_no]['start_time'].replace(':','')
+            if temp_start_time:
+                temp_start_time = get_time(temp_start_time)
+            pevs.append([comp_no, None,[]])
+            #print(f"{comp_no}\nStart time: {start_time.strftime('%X')}")
             try:
                 for line in file:
                     if line.startswith("HFDTE"): # Date line
                         file_date = parse_row(line)
-                        start_time_obj = datetime.datetime.combine(file_date, start_time)
+                        start_time_obj = datetime.datetime.combine(file_date, temp_start_time)
+                        pevs[-1][1] = start_time_obj
                     elif line.startswith("E") and line[7:10]=="PEV": # PEV marker
                         pev_time = parse_row(line, file_date)
                         check_next_line = 1
@@ -92,12 +93,26 @@ def get_pevs(path):
                         pos = parse_row(line, file_date)
                         time_delta_to_start = start_time_obj - pos.time
                         time_delta_str = "After start" if time_delta_to_start < datetime.timedelta(0) else f"-{time_delta_to_start}"
-                        print(f"PEV: {pos.time.strftime('%X')} ({time_delta_str})")
-                        pevs[comp_no].append(pos)
+                        #print(f"PEV: {pos.time.strftime('%X')} ({time_delta_str})")
+                        pevs[-1][2].append(pos)
                         check_next_line = 0
-                    n += 1
+                    n_lines += 1
             except UnicodeDecodeError:
-                #print(f"Unicode error: Line {n}, Comp_No: {comp_no}")
+                #print(f"Unicode error: Line {n_lines}, Comp_No: {comp_no}")
                 pass
-            print("------------------------------------")
-    return pevs
+            #print("------------------------------------")
+    sorted_pevs = sorted(pevs, key=lambda x:x[1])
+    return sorted_pevs
+
+def print_pevs(pevs):
+    for pilot in pevs:
+        comp_no = pilot[0]
+        start_time = pilot[1]
+        pilot_pevs = pilot[2]
+        print(f"Comp No: {comp_no}\nStart Time: {start_time.strftime('%X')}")
+        for pev in pilot_pevs:
+            pev_time = pev.time
+            time_delta = start_time - pev_time
+            time_delta_str = "After start" if time_delta < datetime.timedelta(0) else f"-{time_delta}"
+            print(f"PEV: {pev_time.strftime('%X')} ({time_delta_str})")
+        print("---------------------------------")
