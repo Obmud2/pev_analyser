@@ -1,3 +1,7 @@
+# Module for extracting the Pilot Event Start Markers (PEVs) from IGC traces
+# Jon Pring
+# 01-08-2022 JWGC Tabor, CZ
+
 import os
 import re
 import datetime
@@ -78,8 +82,7 @@ def get_pevs(path):
             temp_start_time = competitor_data.loc[comp_no]['start_time'].replace(':','')
             if temp_start_time:
                 temp_start_time = get_time(temp_start_time)
-            pevs.append([comp_no, None,[]])
-            #print(f"{comp_no}\nStart time: {start_time.strftime('%X')}")
+            pevs.append([comp_no, None, []]) #Comp no, start datetime, list of PEVs
             try:
                 for line in file:
                     if line.startswith("HFDTE"): # Date line
@@ -93,14 +96,12 @@ def get_pevs(path):
                         pos = parse_row(line, file_date)
                         time_delta_to_start = start_time_obj - pos.time
                         time_delta_str = "After start" if time_delta_to_start < datetime.timedelta(0) else f"-{time_delta_to_start}"
-                        #print(f"PEV: {pos.time.strftime('%X')} ({time_delta_str})")
                         pevs[-1][2].append(pos)
                         check_next_line = 0
                     n_lines += 1
             except UnicodeDecodeError:
                 #print(f"Unicode error: Line {n_lines}, Comp_No: {comp_no}")
                 pass
-            #print("------------------------------------")
     sorted_pevs = sorted(pevs, key=lambda x:x[1])
     return sorted_pevs
 

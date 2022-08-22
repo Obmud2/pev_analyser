@@ -1,4 +1,6 @@
-# Import Soaring Spot data
+# Module to import Soaring Spot data and download all IGC traces from competition days
+# Jon Pring
+# 01-08-2022 JWGC Tabor, CZ
 
 from genericpath import exists
 from bs4 import BeautifulSoup
